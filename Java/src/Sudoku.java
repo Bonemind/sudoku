@@ -139,6 +139,7 @@ class Sudoku {
     			}
     		}
     	}
+    	sc.close();
     }
     
     // --------------- where it all starts --------------------
