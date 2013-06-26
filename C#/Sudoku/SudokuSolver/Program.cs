@@ -1,7 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 
 namespace SudokuSolver
 {
@@ -11,9 +8,10 @@ namespace SudokuSolver
         {
             Sudoku s = new Sudoku();
             s.solveIt();
+
+            System.Threading.Thread.Sleep(500);
             Console.WriteLine("Press enter to exit");
             Console.ReadKey();
-            Console.ReadLine();
         }
     }
 }

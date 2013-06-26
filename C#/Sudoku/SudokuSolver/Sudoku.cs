@@ -1,7 +1,5 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 
 namespace SudokuSolver
 {
@@ -18,53 +16,55 @@ namespace SudokuSolver
         const int DMAX = 9;
 
         /// <summary>
-        /// The number of cells (x,y) in a box
+        /// The number of cells (x, y) in a box
         /// </summary>
         const int BOXSIZE = 3;
 
         /// <summary>
         /// The array containing the grid
         /// </summary>
-        int[,] grid;
+        private int[,] grid;
 
         /// <summary>
         /// The current solution number we have found
         /// </summary>
-        int solutionnr = 0;
+        private int solutionnr = 0;
 
         /// <summary>
         /// The number of the next empty column
         /// </summary>
-        int cempty;
+        private int cempty;
 
         /// <summary>
         /// The number of the next empty row
         /// </summary>
-        int rempty;
+        private int rempty;
+
+        // ----------------- Conflict calculation --------------------
 
         /// <summary>
         /// Check if there is a conflict 
         /// </summary>
-        /// <param name="r">The row coordinate</param>
-        /// <param name="c">The column coordinate</param>
-        /// <param name="d">The current digit we are validating</param>
-        /// <returns>True if it can be filled in, false otherwise</returns>
-        private bool givesConflict(int r, int c, int d)
+        /// <param name="row">The row coordinate</param>
+        /// <param name="column">The column coordinate</param>
+        /// <param name="digit">The current digit we are validating</param>
+        /// <returns>True if inserting that number would cause a conflict, false if it's safe to insert</returns>
+        private bool givesConflict(int row, int column, int digit)
         {
-            return rowConflict(r, d) || colConflict(c, d) || boxConflict(r, c, d);
+            return rowConflict(row, digit) || colConflict(column, digit) || boxConflict(row, column, digit);
         }
 
         /// <summary>
         /// Check if there is a row conflict
         /// </summary>
-        /// <param name="r">The row we want to check</param>
-        /// <param name="d">The digit we want to insert</param>
-        /// <returns>True if we can insert it, false otherwise</returns>
-        private bool rowConflict(int r, int d)
+        /// <param name="row">The row we want to check</param>
+        /// <param name="digit">The digit we want to insert</param>
+        /// <returns>True if inserting that number would cause a conflict, false if it's safe to insert</returns>
+        private bool rowConflict(int row, int digit)
         {
-            for (int c = 0; c < SIZE; c++)
+            for (int column = 0; column < SIZE; column++)
             {
-                if (grid[r,c] == d)
+                if (grid[row, column] == digit)
                 {
                     return true;
                 }
@@ -75,21 +75,20 @@ namespace SudokuSolver
         /// <summary>
         /// Check if there is a column conflict
         /// </summary>
-        /// <param name="c">The column we want to check</param>
-        /// <param name="d">The digit we want to insert</param>
-        /// <returns>True if we can insert it, false otherwise</returns>
-        private bool colConflict(int c, int d)
+        /// <param name="column">The column we want to check</param>
+        /// <param name="digit">The digit we want to insert</param>
+        /// <returns>True if inserting that number would cause a conflict, false if it's safe to insert</returns>
+        private bool colConflict(int column, int digit)
         {
-            for (int r = 0; r < SIZE; r++)
+            for (int row = 0; row < SIZE; row++)
             {
-                if (grid[r,c] == d)
+                if (grid[row, column] == digit)
                 {
                     return true;
                 }
             }
             
             return false;
-
         }
 
         /// <summary>
@@ -97,17 +96,17 @@ namespace SudokuSolver
         /// </summary>
         /// <param name="rr"></param>
         /// <param name="cc"></param>
-        /// <param name="d">The digit we want to insert</param>
+        /// <param name="digit">The digit we want to insert</param>
         /// <returns>Returns true if we can insert it, false otherwise</returns>
-        private bool boxConflict(int rr, int cc, int d)
+        private bool boxConflict(int row, int column, int digit)
         {
-            rr -= rr % BOXSIZE;
-            cc -= cc % BOXSIZE;
-            for (int r = 0; r < BOXSIZE; r++)
+            row -= row % BOXSIZE;
+            column -= column % BOXSIZE;
+            for (int rr = 0; rr < BOXSIZE; rr++)
             {
-                for (int c = 0; c < BOXSIZE; c++)
+                for (int cc = 0; cc < BOXSIZE; cc++)
                 {
-                    if (grid[rr + r,cc + c] == d)
+                    if (grid[row + rr, column + cc] == digit)
                     {
                         return true;
                     }
@@ -115,6 +114,8 @@ namespace SudokuSolver
             }
             return false;
         }
+
+        // --------- Solving ----------
 
         /// <summary>
         /// Checks if there is an empty square left
@@ -126,7 +127,7 @@ namespace SudokuSolver
             {
                 for (cempty = 0; cempty < SIZE; cempty++)
                 {
-                    if (grid[rempty,cempty] == 0)
+                    if (grid[rempty, cempty] == 0)
                     {
                         return true;
                     }
@@ -140,30 +141,33 @@ namespace SudokuSolver
         /// </summary>
         private void solve()
         {
-            //if there are no empty squares left we print the current solution
+            // if there are no empty squares left we print the current solution
             if (!findEmptySquare())
             {
                 solutionnr++;
                 print();
                 return;
             }
-            //Set r and c to the next empty cell
-            int r = rempty, c = cempty;
 
-            //we check if any digit between 1 and 9, inclusive can be filled in, if so, we fill it in and call solve again
-            //Since the current digit was filled in calling solve again will go on to fill in the next digit
-            //A function calling itself is called recursion, feel free to look it up :)
-            //After solve returns, we set the current cell back to 0 to be able to compute the next solution
+            // Set row and column to the next empty cell
+            int row = rempty, column = cempty;
+
+            // We check if any digit between 1 and 9, inclusive can be filled in, if so, we fill it in and call solve again
+            // Since the current digit was filled in calling solve again will go on to fill in the next digit
+            // A function calling itself is called recursion, feel free to look it up :)
+            // After solve returns, we set the current cell back to 0 to be able to compute the next solution
             for (int i = 1; i <= DMAX; i++)
             {
-                if (!givesConflict(r, c, i))
+                if (!givesConflict(row, column, i))
                 {
-                    grid[r,c] = i;
+                    grid[row, column] = i;
                     solve();
-                    grid[r,c] = 0;
+                    grid[row, column] = 0;
                 }
             }
         }
+
+        // ------------------------- I/O -------------------------
 
         /// <summary>
         /// Prints the current sudoku grid
@@ -177,7 +181,7 @@ namespace SudokuSolver
                 for (int j = 0; j < SIZE; j++)
                 {
                     Console.Write(" ");
-                    Console.Write((grid[i,j] > 0) ? grid[i,j].ToString() : " ");
+                    Console.Write((grid[i, j] > 0) ? grid[i, j].ToString() : " ");
                     Console.Write(((j + 1) % BOXSIZE == 0) ? " |" : "");
                 }
                 Console.Write("\n");
@@ -194,38 +198,45 @@ namespace SudokuSolver
         /// </summary>
         private void readSudoku()
         {
+            // To store the current character.
     	    char s;
-            //The characters we accept for the sudoku, . is an empty cell
+
+            // The characters we accept for the sudoku, '.' is an empty cell
     	    String vc = "123456789.";
 
-            //We keep reading as long as we dont have a complete sudoku
-    	    for (int r = 0; r < SIZE; r++) {
-                for (int c = 0; c < SIZE; c++)
+            // We keep reading as long as we dont have a complete sudoku
+    	    for (int row = 0; row < SIZE; row++) 
+            {
+                for (int column = 0; column < SIZE; column++)
                 {
-                    //Read the next character
-                    s = Convert.ToChar(Console.Read());
-                    if (vc.Contains(s) && !s.Equals('.'))
+                    // Read the next character
+                    do 
                     {
-                        //Parse it to an int if it is a character we accept and not a .
-                        //An int-array is initalized with 0's so we dont actually have to do anything with '.'
-                        grid[r,c] = int.Parse(s.ToString());
-                    }
-                    //That characted was not valid, lower c by 1 because we don't have a valid int for this row
-                    else if (!s.Equals('.'))
+                        s = Convert.ToChar(Console.Read());
+                    } while (!vc.Contains(s));
+                    // Keep going until we have a valid input.
+
+                    // Parse it to an int if it is a character we accept and not a '.'
+                    // An int-array is initalized with 0's so we dont actually have to do anything with '.'
+                    if (!s.Equals('.'))
                     {
-                        c--;
+                        grid[row, column] = int.Parse(s.ToString());
                     }
                 }
     	    }
         }
 
+        // --------------- Where it all starts --------------------
+
         /// <summary>
-        /// This reads the sudoku and prints calls the solve method
+        /// This reads the sudoku and calls the solve method
         /// </summary>
         public void solveIt()
         {
-            grid = new int[SIZE,SIZE];
+            Console.WriteLine("Enter sudoku:");
+            grid = new int[SIZE, SIZE];
             readSudoku();
+
             Console.WriteLine("Started solving");
             solve();    
             Console.WriteLine("Found " + solutionnr + " solution" + (solutionnr != 1 ? "s" : ""));
